@@ -29,6 +29,7 @@ add_action('wp_ajax_get_coin_market_from_api', 'get_coin_market_from_api');
 
 function get_coin_market_from_api() {
     //test ghi log
+    $coinList = [];
     $file = get_stylesheet_directory() . '/report.txt';
     $current_page =!empty($_POST['current_page']) ? $_POST['current_page'] : 1;
     $results = wp_remote_retrieve_body(wp_remote_get( 'https://api.coincap.io/v2/markets?offset=' . $current_page . '&limit=10'));
@@ -37,8 +38,37 @@ function get_coin_market_from_api() {
     //Chuyển dữ liệu từ kiểu string json sang object trong php 
     $results = json_decode($results);
     
-    if(!is_array( $results) || empty($results)) {
+    if(!is_array( $results->data) || empty($results->data)) {
         return false;
+    }
+
+    $coinList[] = $results->data;
+    foreach($coinList[0] as $coin) {
+        $coin_slug = sanitize_title($coin->baseSymbol . '-' . $coin->baseId);
+
+        $insered_coin = wp_insert_post(
+            [
+                'post_name' => $coin_slug,
+                'post_title' => $coin_slug,
+                'post_type' => 'coin',
+                'post_status' => 'publish'
+            ]
+        );
+
+        if(is_wp_error($insered_coin)) {
+            continue;
+        }
+
+        $fillable = [
+            'field_67062d0163f3c' => 'rank',
+            'field_67062d1163f3d' => 'baseSymbol',
+            'field_67062d1e63f3e' => 'priceUsd',
+            'field_67062d2c63f3f' => 'percentExchangeVolume'
+        ];
+
+        foreach($fillable as $key => $value) {
+            update_field($key, $coin->$value,$insered_coin);
+        }
     }
     $current_page = $current_page + 1;
     //Sử dụng đệ quy bằng việc gọi AJAX
