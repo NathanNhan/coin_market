@@ -24,6 +24,9 @@ function register_coin_market_cpt() {
 
 
 //Step 2: Xử lý call api
+if(!wp_next_scheduled( 'update_coint_data')) {
+    wp_schedule_event( time(), 'daily', 'get_coin_market_from_api' );
+}
 add_action('wp_ajax_nopriv_get_coin_market_from_api','get_coin_market_from_api');
 add_action('wp_ajax_get_coin_market_from_api', 'get_coin_market_from_api');
 
@@ -45,29 +48,51 @@ function get_coin_market_from_api() {
     $coinList[] = $results->data;
     foreach($coinList[0] as $coin) {
         $coin_slug = sanitize_title($coin->baseSymbol . '-' . $coin->baseId);
+        $coin_check = get_page_by_path( $coin_slug, 'OBJECT', 'coin' );
+        if($coin_check == null) {
+            $insered_coin = wp_insert_post(
+                [
+                    'post_name' => $coin_slug,
+                    'post_title' => $coin_slug,
+                    'post_type' => 'coin',
+                    'post_status' => 'publish'
+                ]
+            );
+    
+            if(is_wp_error($insered_coin)) {
+                continue;
+            }
+    
+            $fillable = [
+                'field_67062d0163f3c' => 'rank',
+                'field_67062d1163f3d' => 'baseSymbol',
+                'field_67062d1e63f3e' => 'priceUsd',
+                'field_67062d2c63f3f' => 'percentExchangeVolume',
+                'field_671df8d95fd91' => 'updated'
+            ];
+    
+            foreach($fillable as $key => $value) {
+                update_field($key, $coin->$value,$insered_coin);
+            }
 
-        $insered_coin = wp_insert_post(
-            [
-                'post_name' => $coin_slug,
-                'post_title' => $coin_slug,
-                'post_type' => 'coin',
-                'post_status' => 'publish'
-            ]
-        );
+        } else {
+            $coin_id = $coin_check->ID; 
+            $coin_timestamp = get_field('updated', $coin_id);
 
-        if(is_wp_error($insered_coin)) {
-            continue;
-        }
+            if($coin->updated >= $coin_timestamp) {
+                $fillable = [
+                'field_67062d0163f3c' => 'rank',
+                'field_67062d1163f3d' => 'baseSymbol',
+                'field_67062d1e63f3e' => 'priceUsd',
+                'field_67062d2c63f3f' => 'percentExchangeVolume',
+                'field_671df8d95fd91' => 'updated'
+            ];
+    
+            foreach($fillable as $key => $value) {
+                update_field($key, $coin->$value,$insered_coin);
+            }
 
-        $fillable = [
-            'field_67062d0163f3c' => 'rank',
-            'field_67062d1163f3d' => 'baseSymbol',
-            'field_67062d1e63f3e' => 'priceUsd',
-            'field_67062d2c63f3f' => 'percentExchangeVolume'
-        ];
-
-        foreach($fillable as $key => $value) {
-            update_field($key, $coin->$value,$insered_coin);
+            }
         }
     }
     $current_page = $current_page + 1;
