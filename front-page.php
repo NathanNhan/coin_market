@@ -1,14 +1,38 @@
 <?php get_header(); ?>
-
- <?php 
- $results =wp_remote_retrieve_body(  wp_remote_get('https://api.coincap.io/v2/markets?offset=1&limit=10') );
-
- echo '<prev>';
- print_r($results);
- echo '<prev>';
- die();
+<?php 
 
 
+$result = get_posts(
+    array(
+        'post_type' => 'coin',
+        'posts_per_page' => 1000,
+    ));
 ?>
+
+<div class="container container--narrow page-section">
+ <table id="example" class="display" style="width:100%">
+        <thead>
+            <tr>
+               
+                <th>Base Symbol</th>
+                <th>Rank</th>
+                <th>Price (USD)</th>
+                <th>Percentage</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($result as $coin) : ?>   
+                    <tr>
+                        <td><?=get_field('basesymbol',$coin->ID); ?></td>
+                        <td><?=get_field('rank',$coin->ID); ?></td>
+                        <td><?=get_field('priceusd',$coin->ID); ?></td>
+                        <td><?=get_field('percentexchangevolume',$coin->ID); ?></td>
+                    </tr>
+             <?php endforeach; ?>
+          </tbody> 
+        </tfoot>
+    </table>
+    
+    </div>
 
 <?php get_footer(); ?>
