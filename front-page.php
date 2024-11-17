@@ -1,12 +1,24 @@
 <?php get_header(); ?>
 <?php 
+$result = [];
+
+$cached = wp_cache_get( 'coin', 'coin_group', true );
+
+if($cached == false) {
+    $result = get_posts(
+        array(
+            'post_type' => 'coin',
+            'posts_per_page' => 1000,
+        ));
+
+    wp_cache_set( 'coin', $result, 'coin_group', '86400' );
+} else {
+    $result = $cached;
+}
 
 
-$result = get_posts(
-    array(
-        'post_type' => 'coin',
-        'posts_per_page' => 1000,
-    ));
+
+
 ?>
 
 <div class="container container--narrow page-section">
@@ -34,5 +46,7 @@ $result = get_posts(
     </table>
     
     </div>
+
+    
 
 <?php get_footer(); ?>
